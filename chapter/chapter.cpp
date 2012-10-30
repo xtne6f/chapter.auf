@@ -4,8 +4,8 @@
 #include <windows.h>
 #include <Shlwapi.h>
 #include <imm.h>
-#include "config.h"
 #include "resource.h"
+#include "config.h"
 #include "mylib.h"
 
 #pragma comment(lib, "Shlwapi.lib")
@@ -52,11 +52,9 @@ FILTER_DLL filter = {
 //		変数
 //---------------------------------------------------------------------
 CfgDlg	g_config;
-PrfDat	g_prf;
 HHOOK	g_hHook;
 HHOOK	g_hMessageHook;
 HWND	g_hwnd;
-int		g_keyhook;
 
 //---------------------------------------------------------------------
 //		フィルタ構造体のポインタを渡す関数
@@ -91,7 +89,8 @@ LRESULT CALLBACK KeyboardProc(int nCode,WPARAM wParam,LPARAM lParam)
 	static int ime = 0;
 
 	// Enterキーで入力
-	if (!g_keyhook && nCode == HC_ACTION && wParam == 0x0D && ((lParam & (1 << 30)) == 0) && GetForegroundWindow() == g_hwnd) {
+	// [xt]ダイアログでのEnterを無視するために入力フォーカスをチェック
+	if (nCode == HC_ACTION && wParam == 0x0D && ((lParam & (1 << 30)) == 0) && IsChild(GetDlgItem(g_hwnd, IDC_EDNAME), GetFocus())) {
 		// IMEでのEnterを無視する
 		HIMC hIMC = ImmGetContext(g_hwnd);
 		if(ImmGetOpenStatus(hIMC) && ImmGetCompositionString(hIMC, GCS_COMPSTR, NULL, 0)) ime = 2;
@@ -102,7 +101,6 @@ LRESULT CALLBACK KeyboardProc(int nCode,WPARAM wParam,LPARAM lParam)
 		}
 	}
 	if(ime) ime--;
-	if(g_keyhook) g_keyhook--;	// ダイアログでのEnterを無視するのに使う
 
 	return CallNextHookEx(g_hHook,nCode,wParam,lParam);
 }
@@ -178,6 +176,10 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 {
 	FILE_INFO fip;
 
+	// [xt]WM_FILTER_INITに先行して色々なメッセージが来るので、未初期化のg_configを利用しないようにする
+	if (!g_config.IsInit() && message != WM_FILTER_INIT) {
+		return FALSE;
+	}
 	switch(message) {
 		case WM_FILTER_INIT:
 			g_config.Init(hwnd,editp,fp);
@@ -193,7 +195,6 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 
 			g_hwnd = hwnd;
 			g_hHook = SetWindowsHookEx(WH_KEYBOARD,KeyboardProc,0,GetCurrentThreadId());
-			g_keyhook = 0;
 			g_hMessageHook = SetWindowsHookEx(WH_GETMESSAGE,WindowMessageProc,0,GetCurrentThreadId());
 			break;
 		case WM_FILTER_EXIT:
@@ -202,10 +203,15 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 
 			UnhookWindowsHookEx(g_hMessageHook);
 			UnhookWindowsHookEx(g_hHook);
+			g_config.Exit();
+			break;
+		case WM_FILTER_CHANGE_WINDOW:	//ウィンドウ表示/非表示
+			g_config.UpdateDlgItems();
 			break;
 		case WM_FILTER_UPDATE:	//編集操作
 			g_config.SetFrame(fp->exfunc->get_frame(editp));
 			g_config.SetFrameN(editp,fp->exfunc->get_frame_n(editp));
+			g_config.UpdateDlgItems();
 			break;
 		case WM_FILTER_FILE_OPEN:	//ファイル読み込み
 			if(fp->exfunc->get_file_info(editp,&fip)) g_config.SetFps(fip.video_rate,fip.video_scale);
@@ -213,7 +219,11 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 			// 同名のtxtファイルがあれば、chapterファイルとして読み込む
 			char path[MAX_PATH];
 			strcpy_s(path, fip.name);
-			PathRenameExtension(path, ".txt");
+			char ext[STRLEN];
+			if (!GetDlgItemText(hwnd, IDC_EDFILEEXT, ext, STRLEN) || ext[0] != '.') {
+				strcpy_s(ext, ".txt");
+			}
+			PathRenameExtension(path, ext);
 			if (PathFileExists(path)) {
 				g_config.LoadFromFile(path);
 			}
@@ -255,6 +265,11 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 			g_config.Resize();
 			break;
 
+		case WM_SETFOCUS:
+			// [xt]ダイアログのフォーカスを入力ボックスに移動
+			SetFocus(GetDlgItem(hwnd, IDC_EDNAME));
+			break;
+
 		case WM_COMMAND:
 			switch(LOWORD(wparam)) {
 				case IDC_BUADD:
@@ -269,11 +284,35 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 					return TRUE;
 				case IDC_BUSAVE:
 					g_config.Save();
-					g_keyhook = 1;
 					break;
 				case IDC_BULOAD:
 					g_config.Load();
-					g_keyhook = 1;
+					break;
+				case IDC_BUDELMUTE:
+					g_config.DelMuteChapters();
+					break;
+				case IDC_EDFILEEXT:
+					if (HIWORD(wparam) == EN_CHANGE) {
+						char ext[STRLEN];
+						if (!GetDlgItemText(hwnd, IDC_EDFILEEXT, ext, STRLEN)) ext[0] = '\0';
+						fp->exfunc->ini_save_str(fp, "extension", ext);
+					}
+					break;
+				case IDC_CHECKTIMELINE:
+					fp->exfunc->ini_save_int(fp, "timeline", IsDlgButtonChecked(hwnd, IDC_CHECKTIMELINE));
+					g_config.Resize();
+					g_config.UpdateDlgItems();
+					break;
+				case IDC_CHECKTHUMBS:
+					fp->exfunc->ini_save_int(fp, "thumbs", IsDlgButtonChecked(hwnd, IDC_CHECKTHUMBS));
+					g_config.Resize();
+					g_config.UpdateDlgItems();
+					break;
+				case IDC_THUMBS_MIN:
+					if (HIWORD(wparam) == STN_CLICKED && g_config.SetupThumbs()) {
+						g_config.Resize();
+						g_config.UpdateDlgItems();
+					}
 					break;
 				case IDC_CHECK1:
 				//[ru]ついでに
@@ -298,14 +337,7 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 //		func_project_save
 //---------------------------------------------------------------------
 BOOL func_project_save( FILTER *fp,void *editp,void *data,int *size ) {
-	*size = sizeof(PrfDat);
-	if(data == NULL) return TRUE;	// この関数は2回呼ばれる
-
-	g_prf.m_numChapter = min(100, g_config.m_numChapter);
-	CopyMemory(g_prf.m_Frame,g_config.m_Frame,sizeof(int)*100);
-	CopyMemory(g_prf.m_strTitle,g_config.m_strTitle,sizeof(char)*100*STRLEN);
-	CopyMemory(g_prf.m_SCPos,g_config.m_SCPos,sizeof(int)*100);
-	CopyMemory(data,&g_prf,*size);
+	if (g_config.IsInit()) g_config.ProjectSave(data, size);
 	return TRUE;
 }
 
@@ -313,13 +345,6 @@ BOOL func_project_save( FILTER *fp,void *editp,void *data,int *size ) {
 //		func_project_load
 //---------------------------------------------------------------------
 BOOL func_project_load( FILTER *fp,void *editp,void *data,int size ) {
-	if(size == sizeof(PrfDat)) {
-		CopyMemory(&g_prf,data,size);
-		g_config.m_numChapter = g_prf.m_numChapter;
-		CopyMemory(g_config.m_Frame,g_prf.m_Frame,sizeof(int)*100);
-		CopyMemory(g_config.m_strTitle,g_prf.m_strTitle,sizeof(char)*100*STRLEN);
-		CopyMemory(g_config.m_SCPos,g_prf.m_SCPos,sizeof(int)*100);
-		g_config.ShowList();
-	}
+	if (g_config.IsInit()) g_config.ProjectLoad(data, size);
 	return TRUE;
 }

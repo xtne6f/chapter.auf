@@ -27,6 +27,16 @@
 #define IDC_PRECHECK                    1024
 #define IDC_SCMARK                      1025
 
+//[xt]追加
+#define IDC_BUDELMUTE                   1040
+#define IDC_EDFILEEXT                   1041
+#define IDC_CHECKTIMELINE               1042
+#define IDC_CHECKTHUMBS                 1043
+#define IDC_TIMELINE                    1044
+#define IDC_STATICTIME                  1045
+#define IDC_THUMBS_MIN                  1050
+#define IDC_THUMBS_MAX                  1059
+
 #define IDM_CHAP_NEXT					101
 #define IDM_CHAP_PREV					102
 #define IDM_CHAP_NEXTHERE				103

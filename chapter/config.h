@@ -12,8 +12,7 @@
 
 const int NUMHIS = 50;	// 保存する履歴の数
 const int STRLEN = 256;	// 文字列の最大長
-
-const int MAXCHAPTER = 500;
+const int NUMTHUMBS = IDC_THUMBS_MAX - IDC_THUMBS_MIN + 1;
 
 class CfgDlg;
 
@@ -27,10 +26,10 @@ typedef struct
 	int m_SCPos[100];
 } PrfDat;
 
-typedef struct {
-	int frame;
-	std::string title;
-} chapter;
+//typedef struct {
+//	int frame;
+//	std::string title;
+//} chapter;
 
 class CfgDlg
 {
@@ -47,18 +46,40 @@ class CfgDlg
 	int m_numHis;
 	bool m_loadfile;
 	int m_autosave;
+	int m_listBoxHeight;
+	int m_timelineHeight;
+	int m_thumbWidth;
+	int m_thumbHeight;
+	int m_thumbAspect;
+	int m_thumbsNum;
+	HBITMAP m_hbmThumbs[NUMTHUMBS];
+	WNDPROC m_pStaticWndProc;
+	int m_hoveredChapter;
+	bool m_mouseTracking;
+
+	int m_numChapter;
+	int m_numChapterCapacity;
+	int *m_Frame;
+	char (*m_strTitle)[STRLEN];
+	int *m_SCPos;
 
 	void AddHis();
 	bool SaveToFile(const char *lpFile);
 
-public:
-	int m_numChapter;
-	int m_Frame[MAXCHAPTER];
-	char m_strTitle[MAXCHAPTER][STRLEN];
-	int m_SCPos[MAXCHAPTER];
+	//[xt]関数追加
+	void ReserveChapterList(int numCapacity);
+	void FreeChapterList();
+	void UpdateThumbs();
+	void ClearThumbs();
+	int FindNearestChapter(int num, int denum, int threshold) const;
+	static LRESULT CALLBACK TimelineWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 
+public:
+	CfgDlg() : m_hDlg(NULL) {}
 	void ShowList(int defSelect = -1);
 	void Init(HWND hwnd,void *editp,FILTER *fp);
+	bool IsInit() const { return m_hDlg != NULL; }
+	void Exit();
 	void Resize();
 	void SetFrame(int frame);
 	void SetFps(int rate,int scale);
@@ -82,6 +103,13 @@ public:
 	//ここまで
 
 	void UpdateFramePos();
+
+	//[xt]関数追加
+	void UpdateDlgItems();
+	void DelMuteChapters();
+	bool SetupThumbs();
+	void ProjectSave(void *data, int *size) const;
+	void ProjectLoad(const void *data, int size);
 };
 
 #endif
