@@ -291,6 +291,12 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 				case IDC_BUDELMUTE:
 					g_config.DelMuteChapters();
 					break;
+				case IDC_BUEXPANDEDIT:
+					g_config.ExpandEditPointChapters();
+					break;
+				case IDC_CHECKDEFSAVE:
+					fp->exfunc->ini_save_int(fp, "defsave", IsDlgButtonChecked(hwnd, IDC_CHECKDEFSAVE));
+					break;
 				case IDC_EDFILEEXT:
 					if (HIWORD(wparam) == EN_CHANGE) {
 						char ext[STRLEN];

@@ -34,6 +34,8 @@
 #define IDC_CHECKTHUMBS                 1043
 #define IDC_TIMELINE                    1044
 #define IDC_STATICTIME                  1045
+#define IDC_BUEXPANDEDIT                1046
+#define IDC_CHECKDEFSAVE                1047
 #define IDC_THUMBS_MIN                  1050
 #define IDC_THUMBS_MAX                  1059
 

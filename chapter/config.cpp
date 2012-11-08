@@ -83,7 +83,6 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	m_numChapterCapacity = 0;
 	m_Frame = NULL;
 	m_strTitle = NULL;
-	m_SCPos = NULL;
 	ReserveChapterList(1);
 
 	// フォント
@@ -102,7 +101,7 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	SendDlgItemMessage(hwnd,IDC_BUSAVE,WM_SETFONT,(WPARAM)hfont,0);
 	CreateWindow("BUTTON","読込",WS_CHILD|WS_VISIBLE,450,40,73,22,hwnd,(HMENU)IDC_BULOAD,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_BULOAD,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","自動出力",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,124,73,22,hwnd,(HMENU)IDC_CHECK1,hinst,0);
+	CreateWindow("BUTTON","自動出力",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,290,73,22,hwnd,(HMENU)IDC_CHECK1,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_CHECK1,WM_SETFONT,(WPARAM)hfont,0);
 	//[ru]ボタン追加
 	CreateWindow("BUTTON","無音部分",WS_CHILD|WS_VISIBLE,450,68,73,22,hwnd,(HMENU)IDC_BUDETECT,hinst,0);
@@ -110,15 +109,17 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	
 	CreateWindow("BUTTON","無音削除",WS_CHILD|WS_VISIBLE,450,96,73,22,hwnd,(HMENU)IDC_BUDELMUTE,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_BUDELMUTE,WM_SETFONT,(WPARAM)hfont,0);
+	CreateWindow("BUTTON","編集点展開",WS_CHILD|WS_VISIBLE,450,124,73,22,hwnd,(HMENU)IDC_BUEXPANDEDIT,hinst,0);
+	SendDlgItemMessage(hwnd,IDC_BUEXPANDEDIT,WM_SETFONT,(WPARAM)hfont,0);
 
-	CreateWindow("STATIC","連続",WS_CHILD|WS_VISIBLE,450,130+22,73,22,hwnd,(HMENU)IDC_STATICa,hinst,0);
+	CreateWindow("STATIC","連続",WS_CHILD|WS_VISIBLE,450,130+25,73,22,hwnd,(HMENU)IDC_STATICa,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_STATICa,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,127+22,33,22,hwnd,(HMENU)IDC_EDITSERI,hinst,0);
+	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,127+25,33,22,hwnd,(HMENU)IDC_EDITSERI,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_EDITSERI,WM_SETFONT,(WPARAM)hfont,0);
 
-	CreateWindow("STATIC","閾値",WS_CHILD|WS_VISIBLE,450,160+22,73,22,hwnd,(HMENU)IDC_STATICb,hinst,0);
+	CreateWindow("STATIC","閾値",WS_CHILD|WS_VISIBLE,450,160+25,73,22,hwnd,(HMENU)IDC_STATICb,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_STATICb,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,157+22,33,22,hwnd,(HMENU)IDC_EDITMUTE,hinst,0);
+	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,157+25,33,22,hwnd,(HMENU)IDC_EDITMUTE,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_EDITMUTE,WM_SETFONT,(WPARAM)hfont,0);
 	
 	CreateWindow("BUTTON","SC位置",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,215,73,22,hwnd,(HMENU)IDC_CHECKSC,hinst,0);
@@ -128,7 +129,9 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	SendDlgItemMessage(hwnd,IDC_PRECHECK,WM_SETFONT,(WPARAM)hfont,0);
 	CreateWindow("BUTTON","mark付与",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,265,90,22,hwnd,(HMENU)IDC_SCMARK,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_SCMARK,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,450,290,73,22,hwnd,(HMENU)IDC_EDFILEEXT,hinst,0);
+	CreateWindow("BUTTON","既定保存",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,315,90,22,hwnd,(HMENU)IDC_CHECKDEFSAVE,hinst,0);
+	SendDlgItemMessage(hwnd,IDC_CHECKDEFSAVE,WM_SETFONT,(WPARAM)hfont,0);
+	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,450,340,73,22,hwnd,(HMENU)IDC_EDFILEEXT,hinst,0);
 	SendDlgItemMessage(hwnd,IDC_EDFILEEXT,WM_SETFONT,(WPARAM)hfont,0);
 
 	for (int i = 0; i < NUMTHUMBS; i++) {
@@ -165,6 +168,7 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	// [xt]コントロールの配置に影響するのでここで設定を読む
 	CheckDlgButton(hwnd, IDC_CHECKTIMELINE, m_exfunc->ini_load_int(fp, "timeline", 0));
 	CheckDlgButton(hwnd, IDC_CHECKTHUMBS, m_exfunc->ini_load_int(fp, "thumbs", 0));
+	CheckDlgButton(hwnd, IDC_CHECKDEFSAVE, m_exfunc->ini_load_int(fp, "defsave", 0));
 	m_thumbAspect = m_exfunc->ini_load_int(fp, "thumbAspect", m_thumbAspect);
 	m_thumbsNum = m_exfunc->ini_load_int(fp, "thumbsNum", m_thumbsNum);
 	m_thumbsNum = min(max(m_thumbsNum, 1), NUMTHUMBS);
@@ -192,6 +196,8 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 		{ IDC_PRECHECK, "「無音検索」時に、シーンチェンジ検索も併せて行います（時間がかかります）。" },
 		{ IDC_SCMARK, "「全SC検索」チェック時に無音検索した場合、または「読込」時にSCPos情報がある場合、シーンチェンジ位置にマークを打ちます。" },
 		{ IDC_BUDELMUTE, "名称が\"{数値}フレーム～\"になっているチャプターを一覧からすべて削除します。" },
+		{ IDC_BUEXPANDEDIT, "名称が\"編集点 (間隔：～\"になっているチャプターを展開して後続のチャプター位置を調整します。" },
+		{ IDC_CHECKDEFSAVE, "「保存」時に\"動画ファイル名+チャプター拡張子\"のファイル名で一発保存します。" },
 		{ IDC_EDFILEEXT, "チャプターファイルの拡張子を指定します。" },
 		{ IDC_CHECKTIMELINE, "チャプター位置のタイムラインを表示します。" },
 		{ IDC_CHECKTHUMBS, "前後フレームのサムネイルを表示します。左端サムネイルを左クリックでポップアップ設定が出ます。" },
@@ -294,6 +300,8 @@ void CfgDlg::Resize() {
 		IDC_PRECHECK,
 		IDC_SCMARK,
 		IDC_BUDELMUTE,
+		IDC_BUEXPANDEDIT,
+		IDC_CHECKDEFSAVE,
 		IDC_EDFILEEXT,
 		IDC_BUDEL,
 		IDC_BUADD,
@@ -418,6 +426,8 @@ void CfgDlg::AddHis() {
 	for(int n = 0;n < m_numHis;n++) {
 		SendDlgItemMessage(m_hDlg,IDC_EDNAME,CB_ADDSTRING,0L,(LPARAM)m_strHis[n]);
 	}
+	//[xt]エディットの文字列を維持する
+	SetDlgItemText(m_hDlg,IDC_EDNAME,str);
 
 	//iniに履歴を保存
 	for(int n = 0;n < NUMHIS;n++) {
@@ -431,6 +441,8 @@ void CfgDlg::AddList() {
 	int ins;
 
 	if(m_loadfile == false) return;	//ファイルが読み込まれていない
+
+	CreateUndoPoint();
 
 	GetDlgItemText(m_hDlg,IDC_EDNAME,str,STRLEN);
 	//if(str[0] == '\0') return;	//タイトルが入力されてなくてもおｋ(r13)
@@ -449,13 +461,11 @@ void CfgDlg::AddList() {
 	for(int n = m_numChapter;n > ins;n--) {
 		m_Frame[n] = m_Frame[n-1];
 		strcpy_s(m_strTitle[n],STRLEN,m_strTitle[n-1]);
-		m_SCPos[n] = m_SCPos[n-1];
 	}
 	m_numChapter++;
 
 	strcpy_s(m_strTitle[ins],STRLEN,str);
 	m_Frame[ins] = m_frame;
-	m_SCPos[ins] = -1;
 	ShowList(ins);
 	AddHis();
 }
@@ -469,11 +479,12 @@ void CfgDlg::DelList() {
 	if(m_loadfile == false) return;	//ファイルが読み込まれていない
 	if(m_numChapter <= sel) return; //アイテムがない
 
+	CreateUndoPoint();
+
 	m_numChapter--;
 	for(int n = sel;n < m_numChapter;n++) {
 		m_Frame[n] = m_Frame[n+1];
 		strcpy_s(m_strTitle[n],STRLEN,m_strTitle[n+1]);
-		m_SCPos[n] = m_SCPos[n+1];
 	}
 	ShowList(min(sel, m_numChapter - 1));
 }
@@ -530,9 +541,7 @@ void CfgDlg::PrevHereList() {
 	int frame = m_exfunc->get_frame(m_editp);
 	for(int i=0; i<m_numChapter; ++i) {
 		int seekPos = m_Frame[i];
-		if (m_SCPos[i] >= 0) {
-			seekPos += m_SCPos[i];
-		} else {
+		{
 			// [xt]通常チャプターのシークがおかしくなるので構文チェック
 			char *endp;
 			int n = strtol(m_strTitle[i], &endp, 10);
@@ -838,8 +847,12 @@ void CfgDlg::Seek() {
 	int moveto = m_Frame[sel];
 
 	if (IsDlgButtonChecked(m_fp->hwnd, IDC_CHECKSC) && frames > 0) {	
-		int max_motion_frame = m_SCPos[sel];
-		if(max_motion_frame == -1){
+		int max_motion_frame;
+		const char *pscpos = strstr(m_strTitle[sel], "SCPos:");
+		if (pscpos) {
+			int scFrame = atoi(pscpos + sizeof("SCPos:") - 1);
+			max_motion_frame = max(scFrame, 0);
+		} else {
 			max_motion_frame = GetSCPos(moveto, frames);
 		}
 		moveto += max_motion_frame;
@@ -889,6 +902,16 @@ void CfgDlg::Save() {
 	}
 	FILE_INFO fip;
 	if (m_editp && m_exfunc->get_file_info(m_editp, &fip) && (fip.flag & FILE_INFO_FLAG_VIDEO) && fip.name) {
+		if (IsDlgButtonChecked(m_hDlg, IDC_CHECKDEFSAVE) == BST_CHECKED) {
+			//[xt]既定保存
+			strcpy_s(path, fip.name);
+			PathRenameExtension(path, ext);
+			//[xt]安全のため編集ファイル名と同じではないことを確認
+			if (_stricmp(path, fip.name)) {
+				SaveToFile(path);
+			}
+			return;
+		}
 		// [xt]編集ファイル名にチャプター拡張子をつけたものを初期保存名にする(これは嗜好が分かれるかもしれない)
 		strcpy_s(path, PathFindFileName(fip.name));
 		PathRenameExtension(path, ext);
@@ -945,6 +968,7 @@ bool CfgDlg::SaveToFile(const char *lpFile) {
 		MessageBox(m_hDlg, "出力ファイルを開けませんでした。", "チャプター編集", MB_OK|MB_ICONINFORMATION);
 		return false;
 	}
+	ClearUndoPoint();
 
 	for(int n = 0;n < m_numChapter;n++) {
 		std::string time_str = frame2time(m_Frame[n], m_rate, m_scale);
@@ -1003,6 +1027,7 @@ void CfgDlg::LoadFromFile(char *filename) {
 		MessageBox(NULL,"ファイルを開けませんでした。","チャプター編集",MB_OK|MB_ICONINFORMATION);
 		return;
 	}
+	ClearUndoPoint();
 
 	const std::tr1::basic_regex<TCHAR> re1("^CHAPTER(\\d\\d\\d?\\d?)=(\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
 	const std::tr1::basic_regex<TCHAR> re2("^CHAPTER(\\d\\d\\d?\\d?)NAME=(.*)$");
@@ -1045,7 +1070,6 @@ void CfgDlg::LoadFromFile(char *filename) {
 
 		ReserveChapterList(m_numChapter + 1);
 		m_Frame[m_numChapter] = frame;
-		m_SCPos[m_numChapter] = -1;
 		strcpy_s(m_strTitle[m_numChapter], results.str(2).c_str());
 
 		// SC位置情報の取得
@@ -1058,7 +1082,6 @@ void CfgDlg::LoadFromFile(char *filename) {
 			// 後ろのチャプターほど増えるというのもあまり綺麗じゃないので相対系とみなして修正
 			// (chapter_exe.exeは絶対系なので相互運用は微妙になる)
 			scFrame = max(scFrame, 0);
-			m_SCPos[m_numChapter] = scFrame;
 			
 			// マーク付与
 			if (IsDlgButtonChecked(m_fp->hwnd, IDC_SCMARK)){
@@ -1176,6 +1199,11 @@ public:
 	}
 };
 
+static BOOL CALLBACK EnableChildWindowProc(HWND hwnd, LPARAM lParam) {
+	EnableWindow(hwnd, (BOOL)lParam);
+	return TRUE;
+}
+
 //[ru]無音部分検出
 void CfgDlg::DetectMute() {
 	if(m_loadfile == false)
@@ -1206,6 +1234,8 @@ void CfgDlg::DetectMute() {
 	m_exfunc->ini_save_int(m_fp, "muteLimit", mute);
 
 	int n = m_exfunc->get_frame_n(m_editp);
+
+	CreateUndoPoint();
 
 	// チャプター個数
 	// [xt]作業中にメッセージを回すため、チャプター数と配列内容に不整合があるとまずいのでエイリアスにした
@@ -1245,7 +1275,9 @@ void CfgDlg::DetectMute() {
 	if (!GetWindowText(m_hDlg, origCaption, sizeof(origCaption))) {
 		origCaption[0] = '\0';
 	}
-	EnableWindow(m_hDlg, FALSE);
+	// [xt]コントロールと「閉じる」ボタンを無効化
+	EnumChildWindows(m_hDlg, EnableChildWindowProc, FALSE);
+	SetClassLong(m_hDlg, GCL_STYLE, GetClassLong(m_hDlg, GCL_STYLE) | CS_NOCLOSE);
 
 	// フレームごとに音声を解析
 	int skip = 0;
@@ -1279,7 +1311,6 @@ void CfgDlg::DetectMute() {
 			else
 				sprintf_s(m_strTitle[pos], STRLEN, "編集点 (間隔：%d)", diff);
 			m_Frame[pos] = i;
-			m_SCPos[pos] = -1;
 			++pos;
 			mute_fr = 0;
 			start_fr = i;
@@ -1325,7 +1356,8 @@ void CfgDlg::DetectMute() {
 				if (cfaw.isLoadFailed()) {
 					MessageBox(this->m_fp->hwnd, "FAWをデコードするのに 11/02/06以降のFAWPreview.auf（FAWぷれびゅ～） が必要です。", "エラー", MB_OK);
 					SetWindowText(m_hDlg, origCaption);
-					EnableWindow(m_hDlg, TRUE);
+					SetClassLong(m_hDlg, GCL_STYLE, GetClassLong(m_hDlg, GCL_STYLE) & ~CS_NOCLOSE);
+					EnumChildWindows(m_hDlg, EnableChildWindowProc, TRUE);
 					return ;
 				}
 			}
@@ -1361,17 +1393,15 @@ void CfgDlg::DetectMute() {
 					m_Frame[pos] = start_fr;
 
 					if (IsDlgButtonChecked(m_fp->hwnd, IDC_PRECHECK)){
-						m_SCPos[pos] = GetSCPos(start_fr, mute_fr);
-						sprintf_s(m_strTitle[pos], STRLEN, "%02dフレーム %s SCPos:%d", mute_fr, mark, m_SCPos[pos]);
+						int scFrame = GetSCPos(start_fr, mute_fr);
+						sprintf_s(m_strTitle[pos], STRLEN, "%02dフレーム %s SCPos:%d", mute_fr, mark, scFrame);
 						if (IsDlgButtonChecked(m_fp->hwnd, IDC_SCMARK)){
-							int target_frame = start_fr + m_SCPos[pos];
+							int target_frame = start_fr + scFrame;
 							FRAME_STATUS frameStatus;
 							m_exfunc->get_frame_status(m_editp, target_frame, &frameStatus);
 							frameStatus.edit_flag |= EDIT_FRAME_EDIT_FLAG_MARKFRAME;
 							m_exfunc->set_frame_status(m_editp, target_frame, &frameStatus);
 						}
-					}else{
-						m_SCPos[pos] = -1;
 					}
 
 					++pos;
@@ -1382,7 +1412,8 @@ void CfgDlg::DetectMute() {
 	}
 	
 	SetWindowText(m_hDlg, origCaption);
-	EnableWindow(m_hDlg, TRUE);
+	SetClassLong(m_hDlg, GCL_STYLE, GetClassLong(m_hDlg, GCL_STYLE) & ~CS_NOCLOSE);
+	EnumChildWindows(m_hDlg, EnableChildWindowProc, TRUE);
 	ShowList();
 }
 //ここまで
@@ -1396,55 +1427,57 @@ void CfgDlg::UpdateFramePos()
 	int nShowing, toSelect = -1;
 	nShowing = m_exfunc->get_frame(m_editp);
 
-	int orgNum = m_numChapter;
-	int *orgFrame = (int*)malloc(sizeof(int) * (orgNum+1));
-	char (*orgTitle)[STRLEN] = (char(*)[STRLEN])malloc(sizeof(orgTitle[0]) * (orgNum+1));
-	int *orgSCPos = (int*)malloc(sizeof(int) * (orgNum+1));
-	memcpy(orgFrame, m_Frame, sizeof(int) * orgNum);
-	memcpy(orgTitle, m_strTitle, sizeof(orgTitle[0]) * orgNum);
-	memcpy(orgSCPos, m_SCPos, sizeof(int) * orgNum);
+	CreateUndoPoint();
 
+	int orgNum = m_numChapter;
 	m_numChapter = 0;
 	int pos = 0; // 新しい位置
-	int bCutInserted = false;
+	int diffTotal = diff;
 	for(int n=0; n<orgNum; n++){
-		if(stFrame <= orgFrame[n] && orgFrame[n] <= edFrame){
-			if (pos == 0) {
-				continue;
-			}
-			if (bCutInserted == false) {
-				bCutInserted = true;
-				if (m_Frame[pos-1] + 30 > stFrame) {
-					pos--;
-				}
-				ReserveChapterList(pos + 1);
-				m_Frame[pos] = stFrame;
-				m_SCPos[pos] = 0;
-				sprintf_s(m_strTitle[pos], STRLEN, "編集点 (間隔：%d)", diff);
-				pos++;
+		if(stFrame <= m_Frame[n] && m_Frame[n] <= edFrame){
+			// [xt]間に編集点があれば加算する
+			static const char szMark[] = "編集点 (間隔：";
+			if(!strncmp(m_strTitle[n], szMark, sizeof(szMark) - 1)){
+				int m = atoi(m_strTitle[n] + sizeof(szMark) - 1);
+				diffTotal += max(m, 0);
 			}
 			continue;
 		}
-		// 選択位置の決定
-		if (nShowing > orgFrame[n]) {
-			toSelect = n;
-		}
-
-		ReserveChapterList(pos + 1);
-		m_Frame[pos] = orgFrame[n];
-		if(orgFrame[n] > edFrame){
+		m_Frame[pos] = m_Frame[n];
+		if(m_Frame[n] > edFrame){
 			m_Frame[pos] -= diff;
 		}
-		strcpy_s(m_strTitle[pos], STRLEN, orgTitle[n]);
-		m_SCPos[pos] = orgSCPos[n];
+		if(pos != n){
+			strcpy_s(m_strTitle[pos], m_strTitle[n]);
+		}
 		pos++;
+	}
+	// [xt]間にチャプターがないと編集点が出力されないのを修正
+	ReserveChapterList(++pos);
+	for(int n=pos-1; n>=0; n--){
+		if(n == 0 || m_Frame[n-1] < stFrame){
+			m_Frame[n] = stFrame;
+			sprintf_s(m_strTitle[n], "編集点 (間隔：%d)", diffTotal);
+			break;
+		}
+		m_Frame[n] = m_Frame[n-1];
+		strcpy_s(m_strTitle[n],m_strTitle[n-1]);
+	}
+	// [xt]現在表示フレームかその手前を選択する仕様(だと思う)がそうなってなかったのを修正
+	if(nShowing > edFrame){
+		nShowing -= diff;
+	}else if(nShowing > stFrame){
+		nShowing = stFrame;
+	}
+	for(int n=0; n<pos && nShowing>=m_Frame[n]; n++){
+		// 選択位置の決定
+		toSelect = n;
 	}
 	m_numChapter = pos;
 	ShowList(toSelect);
-
-	free(orgFrame);
-	free(orgTitle);
-	free(orgSCPos);
+	if(0 <= toSelect && toSelect < m_numChapter){
+		SetDlgItemText(m_hDlg,IDC_EDNAME,m_strTitle[toSelect]);
+	}
 }
 
 void CfgDlg::UpdateDlgItems()
@@ -1462,6 +1495,7 @@ void CfgDlg::UpdateDlgItems()
 void CfgDlg::DelMuteChapters()
 {
 	if (!m_loadfile) return;
+	CreateUndoPoint();
 
 	int n = 0;
 	for (int i = 0; i < m_numChapter; i++) {
@@ -1471,9 +1505,59 @@ void CfgDlg::DelMuteChapters()
 			if (i != n) {
 				m_Frame[n] = m_Frame[i];
 				strcpy_s(m_strTitle[n], m_strTitle[i]);
-				m_SCPos[n] = m_SCPos[i];
 			}
 			n++;
+		}
+	}
+	if (m_numChapter != n) {
+		m_numChapter = n;
+		ShowList();
+	}
+}
+
+void CfgDlg::ExpandEditPointChapters()
+{
+	if (!m_loadfile) return;
+	CreateUndoPoint();
+
+	// 開始と終了のチャプター名を置きかえる隠し設定
+	char szStartMark[STRLEN];
+	if (!m_exfunc->ini_load_str(m_fp, "editStartMark", szStartMark, "") || !szStartMark[0]) {
+		strcpy_s(szStartMark, "編集点開始");
+	}
+	char szEndMark[STRLEN];
+	if (!m_exfunc->ini_load_str(m_fp, "editEndMark", szEndMark, "") || !szEndMark[0]) {
+		strcpy_s(szEndMark, "編集点終了");
+	}
+
+	// 編集点の間隔だけ後続のチャプター位置をずらす
+	int n = 0;
+	int diffTotal = 0;
+	static const char szMark[] = "編集点 (間隔：";
+	for (int i = 0; i < m_numChapter; i++) {
+		m_Frame[i] += diffTotal;
+		if (!strncmp(m_strTitle[i], szMark, sizeof(szMark) - 1)) {
+			int m = atoi(m_strTitle[i] + sizeof(szMark) - 1);
+			diffTotal += max(m, 1);
+			n++;
+		}
+		n++;
+	}
+
+	// 編集点のチャプターを開始と終了に分割
+	ReserveChapterList(n);
+	for (int i = m_numChapter - 1, j = n - 1; i >= 0; i--, j--) {
+		if (!strncmp(m_strTitle[i], szMark, sizeof(szMark) - 1)) {
+			int m = atoi(m_strTitle[i] + sizeof(szMark) - 1);
+			m_Frame[j] = m_Frame[i] + max(m - 1, 1);
+			strcpy_s(m_strTitle[j], szEndMark);
+			m_Frame[--j] = m_Frame[i];
+			strcpy_s(m_strTitle[j], szStartMark);
+		} else {
+			if (i != j) {
+				m_Frame[j] = m_Frame[i];
+				strcpy_s(m_strTitle[j], m_strTitle[i]);
+			}
 		}
 	}
 	if (m_numChapter != n) {
@@ -1542,7 +1626,6 @@ void CfgDlg::ProjectSave(void *data, int *size) const
 		prf->m_numChapter = min(100, m_numChapter);
 		CopyMemory(prf->m_Frame, m_Frame, sizeof(int) * prf->m_numChapter);
 		for (int i = 0; i < prf->m_numChapter; i++) strcpy_s(prf->m_strTitle[i], m_strTitle[i]);
-		CopyMemory(prf->m_SCPos, m_SCPos, sizeof(int) * prf->m_numChapter);
 	}
 }
 
@@ -1554,9 +1637,18 @@ void CfgDlg::ProjectLoad(const void *data, int size)
 		ReserveChapterList(m_numChapter);
 		CopyMemory(m_Frame, prf->m_Frame, sizeof(int) * m_numChapter);
 		CopyMemory(m_strTitle, prf->m_strTitle, sizeof(m_strTitle[0]) * m_numChapter);
-		CopyMemory(m_SCPos, prf->m_SCPos, sizeof(int) * m_numChapter);
 		ShowList();
 	}
+}
+
+void CfgDlg::CreateUndoPoint()
+{
+	SetDlgItemText(m_hDlg, IDC_BUSAVE, "保存*");
+}
+
+void CfgDlg::ClearUndoPoint()
+{
+	SetDlgItemText(m_hDlg, IDC_BUSAVE, "保存");
 }
 
 // チャプターリストを格納する領域を確保する
@@ -1567,7 +1659,6 @@ void CfgDlg::ReserveChapterList(int numCapacity)
 		m_numChapterCapacity = numCapacity + 16;
 		m_Frame = (int*)realloc(m_Frame, sizeof(int) * m_numChapterCapacity);
 		m_strTitle = (char(*)[STRLEN])realloc(m_strTitle, sizeof(m_strTitle[0]) * m_numChapterCapacity);
-		m_SCPos = (int*)realloc(m_SCPos, sizeof(int) * m_numChapterCapacity);
 	}
 	// どうせヌルポインタ例外になるので確保失敗チェックはしない
 }
@@ -1577,10 +1668,8 @@ void CfgDlg::FreeChapterList()
 	m_numChapterCapacity = 0;
 	free(m_Frame);
 	free(m_strTitle);
-	free(m_SCPos);
 	m_Frame = NULL;
 	m_strTitle = NULL;
-	m_SCPos = NULL;
 }
 
 // 24bitDIB形式画像を32bitビットマップにコピー

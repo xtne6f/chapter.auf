@@ -61,12 +61,14 @@ class CfgDlg
 	int m_numChapterCapacity;
 	int *m_Frame;
 	char (*m_strTitle)[STRLEN];
-	int *m_SCPos;
+	//[xt]m_SCPosの情報はm_strTitleに含まれていて冗長なので削除してみる
 
 	void AddHis();
 	bool SaveToFile(const char *lpFile);
 
 	//[xt]関数追加
+	void CreateUndoPoint();
+	void ClearUndoPoint();
 	void ReserveChapterList(int numCapacity);
 	void FreeChapterList();
 	void UpdateThumbs();
@@ -107,6 +109,7 @@ public:
 	//[xt]関数追加
 	void UpdateDlgItems();
 	void DelMuteChapters();
+	void ExpandEditPointChapters();
 	bool SetupThumbs();
 	void ProjectSave(void *data, int *size) const;
 	void ProjectLoad(const void *data, int size);
