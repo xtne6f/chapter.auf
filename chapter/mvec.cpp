@@ -239,7 +239,41 @@ int full_search(unsigned char* current_pix,	//現フレームの輝度。8ビッ
 //		フレーム間絶対値差合計関数
 //---------------------------------------------------------------------
 //bbMPEGのソースを流用
+#ifdef DISABLE_SIMD
+typedef union __m128i {
+	__int32             m128i_i32[4];
+	unsigned __int8     m128i_u8[16];
+	unsigned __int16    m128i_u16[8];
+} __m128i;
+#define ABS_(a) ((a) < 0 ? -(a) : (a))
+static inline __m128i _mm_load_si128(const __m128i *p) { return *p; }
+static inline __m128i _mm_loadu_si128(const __m128i *p) { return *p; }
+static inline int _mm_extract_epi16(__m128i a, int imm) { return a.m128i_u16[imm]; }
+static inline __m128i _mm_sad_epu8(__m128i a, __m128i b)
+{
+	__m128i r = {};
+	r.m128i_u16[0] = ABS_(a.m128i_u8[ 0] - b.m128i_u8[ 0]) + ABS_(a.m128i_u8[ 1] - b.m128i_u8[ 1]) +
+	                 ABS_(a.m128i_u8[ 2] - b.m128i_u8[ 2]) + ABS_(a.m128i_u8[ 3] - b.m128i_u8[ 3]) +
+	                 ABS_(a.m128i_u8[ 4] - b.m128i_u8[ 4]) + ABS_(a.m128i_u8[ 5] - b.m128i_u8[ 5]) +
+	                 ABS_(a.m128i_u8[ 6] - b.m128i_u8[ 6]) + ABS_(a.m128i_u8[ 7] - b.m128i_u8[ 7]);
+	r.m128i_u16[4] = ABS_(a.m128i_u8[ 8] - b.m128i_u8[ 8]) + ABS_(a.m128i_u8[ 9] - b.m128i_u8[ 9]) +
+	                 ABS_(a.m128i_u8[10] - b.m128i_u8[10]) + ABS_(a.m128i_u8[11] - b.m128i_u8[11]) +
+	                 ABS_(a.m128i_u8[12] - b.m128i_u8[12]) + ABS_(a.m128i_u8[13] - b.m128i_u8[13]) +
+	                 ABS_(a.m128i_u8[14] - b.m128i_u8[14]) + ABS_(a.m128i_u8[15] - b.m128i_u8[15]);
+	return r;
+}
+static inline __m128i _mm_add_epi32(__m128i a, __m128i b)
+{
+	__m128i r;
+	r.m128i_i32[0] = a.m128i_i32[0] + b.m128i_i32[0];
+	r.m128i_i32[1] = a.m128i_i32[1] + b.m128i_i32[1];
+	r.m128i_i32[2] = a.m128i_i32[2] + b.m128i_i32[2];
+	r.m128i_i32[3] = a.m128i_i32[3] + b.m128i_i32[3];
+	return r;
+}
+#else
 #include <emmintrin.h>
+#endif
 
 int dist( unsigned char *p1, unsigned char *p2, int lx, int distlim, int block_height )
 {
