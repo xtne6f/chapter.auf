@@ -6,7 +6,6 @@
 #include <Shlwapi.h>
 #include <cstdio>
 #include <string>
-#include <regex>
 #include <emmintrin.h>
 #include "resource.h"
 #include "config.h"
@@ -57,7 +56,23 @@ public:
 #endif
 //ここまで
 
+static HWND CreateExAndSetFont(DWORD dwExStyle,LPCTSTR lpClass,LPCTSTR lpWindow,DWORD dwStyle,int *pX,int *pY,int nWidth,int nHeight,
+                               HWND hWndParent,UINT_PTR hMenu,HINSTANCE hInstance,LPVOID lpParam,HFONT hfont,int incX=0,int incY=0) {
+	// pX==NULLのときは不可視の位置に飛ばす
+	HWND hwnd = CreateWindowEx(dwExStyle,lpClass,lpWindow,dwStyle,pX?*pX:-1000,pX?*pY:-1000,nWidth,nHeight,hWndParent,(HMENU)hMenu,hInstance,lpParam);
+	if (hwnd && hfont) {
+		SendMessage(hwnd,WM_SETFONT,(WPARAM)hfont,0);
+	}
+	if (pX) {
+		*pX += incX;
+		*pY += incY;
+	}
+	return hwnd;
+}
+
 void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
+	static const int S_ITEM = WS_CHILD|WS_VISIBLE;
+	int x,y;
 	HFONT hfont,hfont2;
 	char str[STRLEN];
 	HINSTANCE hinst = fp->dll_hinst;
@@ -89,56 +104,43 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 	hfont2 = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 	hfont = my_getfont(fp,editp);	// AviUtlデフォルトフォント
 
+	// 不可視にする部品のリスト
+	char strHide[STRLEN];
+	if (!m_exfunc->ini_load_str(fp,"hideList",strHide,"") || strHide[0] == ';') {
+		strHide[0] = '\0';
+	}
+
 	// ウインドウの作成（部品追加）
 	SendMessage(hwnd,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"LISTBOX","",WS_CHILD|WS_VISIBLE|LBS_NOTIFY|WS_VSCROLL|WS_TABSTOP,0,0,448,335,hwnd,(HMENU)IDC_LIST1,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_LIST1,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE|ES_READONLY,48,336,190,20,hwnd,(HMENU)IDC_EDTIME,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_EDTIME,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"COMBOBOX","",WS_CHILD|WS_VISIBLE|CBS_DROPDOWN|WS_VSCROLL|WS_TABSTOP,48,357,400,120,hwnd,(HMENU)IDC_EDNAME,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_EDNAME,WM_SETFONT,(WPARAM)hfont2,0);
-	CreateWindow("BUTTON","保存",WS_CHILD|WS_VISIBLE,450,12,73,22,hwnd,(HMENU)IDC_BUSAVE,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUSAVE,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","読込",WS_CHILD|WS_VISIBLE,450,40,73,22,hwnd,(HMENU)IDC_BULOAD,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BULOAD,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","自動出力",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,290,73,22,hwnd,(HMENU)IDC_CHECK1,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_CHECK1,WM_SETFONT,(WPARAM)hfont,0);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"LISTBOX","",S_ITEM|LBS_NOTIFY|WS_VSCROLL|WS_TABSTOP,&(x=0),&(y=0),447,332,hwnd,IDC_LIST1,hinst,0,hfont);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"EDIT","",S_ITEM|ES_READONLY,&(x=48),&(y=336),190,20,hwnd,IDC_EDTIME,hinst,0,hfont);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"COMBOBOX","",S_ITEM|CBS_DROPDOWN|CBS_AUTOHSCROLL|WS_VSCROLL|WS_TABSTOP,&(x=48),&(y=358),400,120,hwnd,IDC_EDNAME,hinst,0,hfont2);
+	x = 450;
+	y = 6;
+	CreateExAndSetFont(0,"BUTTON","保存",S_ITEM,strstr(strHide,"SV")?NULL:&x,&y,72,22,hwnd,IDC_BUSAVE,hinst,0,hfont,0,24);
+	CreateExAndSetFont(0,"BUTTON","読込",S_ITEM,strstr(strHide,"LD")?NULL:&x,&y,72,22,hwnd,IDC_BULOAD,hinst,0,hfont,0,24);
 	//[ru]ボタン追加
-	CreateWindow("BUTTON","無音部分",WS_CHILD|WS_VISIBLE,450,68,73,22,hwnd,(HMENU)IDC_BUDETECT,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUDETECT,WM_SETFONT,(WPARAM)hfont,0);
-	
-	CreateWindow("BUTTON","無音削除",WS_CHILD|WS_VISIBLE,450,96,73,22,hwnd,(HMENU)IDC_BUDELMUTE,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUDELMUTE,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","編集点展開",WS_CHILD|WS_VISIBLE,450,124,73,22,hwnd,(HMENU)IDC_BUEXPANDEDIT,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUEXPANDEDIT,WM_SETFONT,(WPARAM)hfont,0);
-
-	CreateWindow("STATIC","連続",WS_CHILD|WS_VISIBLE,450,130+25,73,22,hwnd,(HMENU)IDC_STATICa,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_STATICa,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,127+25,33,22,hwnd,(HMENU)IDC_EDITSERI,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_EDITSERI,WM_SETFONT,(WPARAM)hfont,0);
-
-	CreateWindow("STATIC","閾値",WS_CHILD|WS_VISIBLE,450,160+25,73,22,hwnd,(HMENU)IDC_STATICb,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_STATICb,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE,490,157+25,33,22,hwnd,(HMENU)IDC_EDITMUTE,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_EDITMUTE,WM_SETFONT,(WPARAM)hfont,0);
-	
-	CreateWindow("BUTTON","SC位置",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,215,73,22,hwnd,(HMENU)IDC_CHECKSC,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_CHECKSC,WM_SETFONT,(WPARAM)hfont,0);
+	CreateExAndSetFont(0,"BUTTON","無音部分",S_ITEM,strstr(strHide,"DM")?NULL:&x,&y,72,22,hwnd,IDC_BUDETECT,hinst,0,hfont,0,24);
+	CreateExAndSetFont(0,"BUTTON","無音削除",S_ITEM,strstr(strHide,"EM")?NULL:&x,&y,72,22,hwnd,IDC_BUDELMUTE,hinst,0,hfont,0,24);
+	CreateExAndSetFont(0,"BUTTON","編集点展開",S_ITEM,strstr(strHide,"XE")?NULL:&x,&y,72,22,hwnd,IDC_BUEXPANDEDIT,hinst,0,hfont,0,24);
+	y += 4;
+	CreateExAndSetFont(0,"STATIC","連続",S_ITEM,strstr(strHide,"MS")?NULL:&x,&y,36,20,hwnd,IDC_STATICa,hinst,0,hfont,36,-2);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"EDIT","",S_ITEM|ES_AUTOHSCROLL|ES_NUMBER,strstr(strHide,"MS")?NULL:&x,&y,36,20,hwnd,IDC_EDITSERI,hinst,0,hfont,-36,26);
+	CreateExAndSetFont(0,"STATIC","閾値",S_ITEM,strstr(strHide,"MT")?NULL:&x,&y,36,20,hwnd,IDC_STATICb,hinst,0,hfont,36,-2);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"EDIT","",S_ITEM|ES_AUTOHSCROLL|ES_NUMBER,strstr(strHide,"MT")?NULL:&x,&y,36,20,hwnd,IDC_EDITMUTE,hinst,0,hfont,-36,26);
+	y -= 2;
+	CreateExAndSetFont(0,"BUTTON","SC位置",S_ITEM|BS_AUTOCHECKBOX,strstr(strHide,"SC")?NULL:&x,&y,76,18,hwnd,IDC_CHECKSC,hinst,0,hfont,0,20);
 	//--ここまで
-	CreateWindow("BUTTON","全SC検出",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,240,90,22,hwnd,(HMENU)IDC_PRECHECK,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_PRECHECK,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","mark付与",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,265,90,22,hwnd,(HMENU)IDC_SCMARK,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_SCMARK,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","既定保存",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,450,315,90,22,hwnd,(HMENU)IDC_CHECKDEFSAVE,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_CHECKDEFSAVE,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindowEx(WS_EX_CLIENTEDGE,"EDIT","",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,450,340,73,22,hwnd,(HMENU)IDC_EDFILEEXT,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_EDFILEEXT,WM_SETFONT,(WPARAM)hfont,0);
+	CreateExAndSetFont(0,"BUTTON","全SC検出",S_ITEM|BS_AUTOCHECKBOX,strstr(strHide,"SA")?NULL:&x,&y,76,18,hwnd,IDC_PRECHECK,hinst,0,hfont,0,20);
+	CreateExAndSetFont(0,"BUTTON","mark付与",S_ITEM|BS_AUTOCHECKBOX,strstr(strHide,"SM")?NULL:&x,&y,76,18,hwnd,IDC_SCMARK,hinst,0,hfont,0,20);
+	CreateExAndSetFont(0,"BUTTON","自動出力",S_ITEM|BS_AUTOCHECKBOX,strstr(strHide,"AU")?NULL:&x,&y,76,18,hwnd,IDC_CHECK1,hinst,0,hfont,0,20);
+	CreateExAndSetFont(0,"BUTTON","既定保存",S_ITEM|BS_AUTOCHECKBOX,strstr(strHide,"DS")?NULL:&x,&y,76,18,hwnd,IDC_CHECKDEFSAVE,hinst,0,hfont,0,20);
+	CreateExAndSetFont(WS_EX_CLIENTEDGE,"EDIT","",S_ITEM|ES_AUTOHSCROLL,strstr(strHide,"FX")?NULL:&x,&y,72,20,hwnd,IDC_EDFILEEXT,hinst,0,hfont,0,24);
 
 	for (int i = 0; i < NUMTHUMBS; i++) {
-		CreateWindow("STATIC","",WS_CHILD|WS_VISIBLE|SS_BITMAP|SS_NOTIFY,0,335,0,0,hwnd,(HMENU)(IDC_THUMBS_MIN+i),hinst,0);
+		CreateWindow("STATIC","",S_ITEM|SS_BITMAP|SS_NOTIFY,0,335,0,0,hwnd,(HMENU)(IDC_THUMBS_MIN+i),hinst,0);
 	}
-	HWND hItem = CreateWindow("STATIC","",WS_CHILD|WS_VISIBLE|SS_NOTIFY/*|SS_BLACKFRAME*/,0,335+5,550,0,hwnd,(HMENU)IDC_TIMELINE,hinst,0);
-	SendMessage(hItem,WM_SETFONT,(WPARAM)hfont2,0);
+	HWND hItem = CreateExAndSetFont(0,"STATIC","",S_ITEM|SS_NOTIFY/*|SS_BLACKFRAME*/,&(x=0),&(y=335+5),550,0,hwnd,IDC_TIMELINE,hinst,0,hfont2);
 	// [xt]ウィンドウプロシージャを登録
 	m_pStaticWndProc = (WNDPROC)GetWindowLong(hItem,GWL_WNDPROC);
 	if (m_pStaticWndProc) {
@@ -147,23 +149,14 @@ void CfgDlg::Init(HWND hwnd,void *editp,FILTER *fp) {
 		m_hoveredChapter = -1;
 		m_mouseTracking = false;
 	}
-
-
-	CreateWindow("BUTTON","削除",WS_CHILD|WS_VISIBLE,450,335,73,22,hwnd,(HMENU)IDC_BUDEL,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUDEL,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","追加",WS_CHILD|WS_VISIBLE,450,360,73,22,hwnd,(HMENU)IDC_BUADD,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_BUADD,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("STATIC","時間",WS_CHILD|WS_VISIBLE,12,336,31,17,hwnd,(HMENU)IDC_STATIC1,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_STATIC1,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("STATIC","名称",WS_CHILD|WS_VISIBLE,12,360,31,17,hwnd,(HMENU)IDC_STATIC2,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_STATIC2,WM_SETFONT,(WPARAM)hfont,0);
-
-	CreateWindow("BUTTON","サムネ",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX|BS_PUSHLIKE,240,336,58,20,hwnd,(HMENU)IDC_CHECKTHUMBS,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_CHECKTHUMBS,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("BUTTON","ﾀｲﾑﾗｲﾝ",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX|BS_PUSHLIKE,300,336,58,20,hwnd,(HMENU)IDC_CHECKTIMELINE,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_CHECKTIMELINE,WM_SETFONT,(WPARAM)hfont,0);
-	CreateWindow("STATIC","",WS_CHILD|WS_VISIBLE|SS_RIGHT,0,336,140,17,hwnd,(HMENU)IDC_STATICTIME,hinst,0);
-	SendDlgItemMessage(hwnd,IDC_STATICTIME,WM_SETFONT,(WPARAM)hfont,0);
+	CreateExAndSetFont(0,"BUTTON","削除",S_ITEM,&(x=450),&(y=336),72,22,hwnd,IDC_BUDEL,hinst,0,hfont);
+	CreateExAndSetFont(0,"BUTTON","追加",S_ITEM,&(x=450),&(y=360),72,22,hwnd,IDC_BUADD,hinst,0,hfont);
+	CreateExAndSetFont(0,"STATIC","時間",S_ITEM,&(x=12),&(y=338),36,20,hwnd,IDC_STATIC1,hinst,0,hfont);
+	CreateExAndSetFont(0,"STATIC","名称",S_ITEM,&(x=12),&(y=360),36,20,hwnd,IDC_STATIC2,hinst,0,hfont);
+	x = 240;
+	CreateExAndSetFont(0,"BUTTON","サムネ",S_ITEM|BS_AUTOCHECKBOX|BS_PUSHLIKE,strstr(strHide,"TH")?NULL:&x,&(y=336),54,20,hwnd,IDC_CHECKTHUMBS,hinst,0,hfont,56);
+	CreateExAndSetFont(0,"BUTTON","ﾀｲﾑﾗｲﾝ",S_ITEM|BS_AUTOCHECKBOX|BS_PUSHLIKE,strstr(strHide,"TL")?NULL:&x,&(y=336),54,20,hwnd,IDC_CHECKTIMELINE,hinst,0,hfont);
+	CreateExAndSetFont(0,"STATIC","",S_ITEM|SS_RIGHT,strstr(strHide,"TT")?NULL:&(x=0),&(y=338),140,20,hwnd,IDC_STATICTIME,hinst,0,hfont);
 
 	// [xt]コントロールの配置に影響するのでここで設定を読む
 	CheckDlgButton(hwnd, IDC_CHECKTIMELINE, m_exfunc->ini_load_int(fp, "timeline", 0));
@@ -342,6 +335,14 @@ void CfgDlg::Resize() {
 		GetWindowRect(hItem, &rc);
 		MapWindowPoints(NULL, m_hDlg, (LPPOINT)&rc, 2);
 		MoveWindow(hItem, rc.left, rc.top + bottom - oldTop, rc.right - rc.left, rc.bottom  - rc.top, TRUE);
+		if (bottomItems[i] == IDC_CHECKTIMELINE || bottomItems[i] == IDC_CHECKTHUMBS) {
+			// [xt]ほかのコントロールとかぶるよりは非表示のほうが安全
+			if (left < rc.right) {
+				if (IsWindowVisible(hItem)) ShowWindow(hItem, SW_HIDE);
+			} else {
+				if (!IsWindowVisible(hItem)) ShowWindow(hItem, SW_SHOW);
+			}
+		}
 	}
 
 	// 下側の横幅
@@ -358,7 +359,7 @@ void CfgDlg::Resize() {
 	hItem = GetDlgItem(m_hDlg, IDC_STATICTIME);
 	GetWindowRect(hItem, &rc);
 	MapWindowPoints(NULL, m_hDlg, (LPPOINT)&rc, 2);
-	MoveWindow(hItem, left-(rc.right-rc.left) < 360 ? -1000 : left-(rc.right-rc.left),
+	MoveWindow(hItem, left-(rc.right-rc.left) < 350 ? -1000 : left-(rc.right-rc.left),
 	           rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 }
 
@@ -1020,57 +1021,36 @@ void CfgDlg::Load() {
 
 void CfgDlg::LoadFromFile(char *filename) {
 	FILE *file;
-	char str[STRLEN+2];
-	int h,m,s,ms;
-	int frame;
+	char str[1024];
+	int frame = -1;
 	if(fopen_s(&file,filename,"r")) {
 		MessageBox(NULL,"ファイルを開けませんでした。","チャプター編集",MB_OK|MB_ICONINFORMATION);
 		return;
 	}
 	ClearUndoPoint();
 
-	const std::tr1::basic_regex<TCHAR> re1("^CHAPTER(\\d\\d\\d?\\d?)=(\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
-	const std::tr1::basic_regex<TCHAR> re2("^CHAPTER(\\d\\d\\d?\\d?)NAME=(.*)$");
-
 	m_numChapter = 0;
 
-	while(true) {
-		// 時間の処理
-		if(fgets(str,STRLEN,file) == NULL) break;
-		//                       0123456789012345678901
-		if(strlen(str) < sizeof("CHAPTER00=00:00:00.000") - 1) break;
+	while(fgets(str,sizeof(str),file)) {
+		if(strncmp(str,"CHAPTER",sizeof("CHAPTER")-1)) continue;
+		char *p = &str[sizeof("CHAPTER")-1];
+		while('0' <= *p && *p <= '9') p++;
 
-		std::tr1::match_results<std::string::const_iterator> results;
-		std::string stds(str);
-		if (std::tr1::regex_search(stds, results, re1) == FALSE) {
-			break;
+		if(frame < 0 && strlen(p) >= sizeof("=00:00:00.000")-1 && p[0]=='=' && p[3]==':' && p[6]==':' && p[9]=='.') {
+			// 時間の処理
+			frame = time2frame(atoi(p+1), atoi(p+4), atoi(p+7), atoi(p+10), m_rate, m_scale);
+			continue;
 		}
-		h = atoi(results.str(2).c_str());
-		m = atoi(results.str(3).c_str());
-		s = atoi(results.str(4).c_str());
-		ms = atoi(results.str(5).c_str());
-		frame = time2frame(h, m, s, ms, m_rate, m_scale);
+		if(frame < 0 || strncmp(p,"NAME=",sizeof("NAME=")-1)) continue;
 
 		// 名前の処理
-		if(fgets(str,STRLEN,file) == NULL) break;
-		//                       01234567890123
-		if(strlen(str) < sizeof("CHAPTER00NAME=") - 1) break;
-
+		p += sizeof("NAME=")-1;
 		// strip
-		for(int i = 0;i < STRLEN;i++) {
-			if(str[i] == '\n' || str[i] == '\r') {
-				str[i] = '\0'; break;
-			}
-		}
-
-		stds = str;
-		if (std::tr1::regex_search(stds, results, re2) == FALSE) {
-			break;
-		}
+		p[strcspn(p,"\r\n")] = '\0';
 
 		ReserveChapterList(m_numChapter + 1);
 		m_Frame[m_numChapter] = frame;
-		strcpy_s(m_strTitle[m_numChapter], results.str(2).c_str());
+		lstrcpyn(m_strTitle[m_numChapter], p, sizeof(m_strTitle[0]));
 
 		// SC位置情報の取得
 		const char *szSCPosMark = "SCPos:";
@@ -1093,6 +1073,7 @@ void CfgDlg::LoadFromFile(char *filename) {
 		}
 		
 		m_numChapter++;
+		frame = -1;
 	}
 	fclose(file);
 	ShowList();
@@ -1101,33 +1082,29 @@ void CfgDlg::LoadFromFile(char *filename) {
 // FAWチェックと、FAWPreview.aufを使っての1フレームデコード
 class CFAW {
 	bool is_half;
-
-	bool load_failed;
 	HMODULE _h;
 
 	typedef int (__stdcall *ExtractDecode1FAW)(const short *in, int samples, short *out, bool is_half);
 	ExtractDecode1FAW _ExtractDecode1FAW;
 
+public:
 	bool load() {
-		if (_ExtractDecode1FAW == NULL && load_failed == false) {
+		if (_h == NULL) {
 			_h = LoadLibrary("FAWPreview.auf");
 			if (_h == NULL) {
-				load_failed = true;
 				return false;
 			}
 			_ExtractDecode1FAW = (ExtractDecode1FAW)GetProcAddress(_h, "ExtractDecode1FAW");
 			if (_ExtractDecode1FAW == NULL) {
 				FreeLibrary(_h);
 				_h = NULL;
-				load_failed = true;
 				return false;
 			}
 			return true;
 		}
 		return true;
 	}
-public:
-	CFAW() : _h(NULL), _ExtractDecode1FAW(NULL), load_failed(false), is_half(false) { }
+	CFAW() : _h(NULL), _ExtractDecode1FAW(NULL), is_half(false) { }
 	
 	~CFAW() {
 		if (_h) {
@@ -1135,8 +1112,8 @@ public:
 		}
 	}
 
-	bool isLoadFailed(void) {
-		return load_failed;
+	bool isLoaded() {
+		return _h != NULL;
 	}
 
 	// FAW開始地点を探す。1/2なFAWが見つかれば、以降はそれしか探さない。
@@ -1235,13 +1212,6 @@ void CfgDlg::DetectMute() {
 
 	int n = m_exfunc->get_frame_n(m_editp);
 
-	CreateUndoPoint();
-
-	// チャプター個数
-	// [xt]作業中にメッセージを回すため、チャプター数と配列内容に不整合があるとまずいのでエイリアスにした
-	m_numChapter = 0;
-	int &pos = m_numChapter;
-
 	// 適当にでかめにメモリ確保
 	short buf[48000*2];
 	FRAME_STATUS fs;
@@ -1251,10 +1221,9 @@ void CfgDlg::DetectMute() {
 
 	int start_fr = 0;	// 無音の開始フレーム
 	int mute_fr = 0;	// 無音フレーム数
-	bool isFAW = false;	// FAW使用かどうか（最初の200フレームで検出）
 	CFAW cfaw;
 
-	// FAWチェック
+	// FAW使用かどうか（最初の200フレームで検出）
 	int fawCount = 0;
 	for (int i=0; i<min(200, n); ++i) {
 		int naudio = m_exfunc->get_audio_filtered(m_editp, i, buf);
@@ -1267,8 +1236,18 @@ void CfgDlg::DetectMute() {
 		}
 	}
 	if (fawCount > 10) {
-		isFAW = true;
+		if (!cfaw.load()) {
+			MessageBox(m_fp->hwnd, "FAWをデコードするのに 11/02/06以降のFAWPreview.auf（FAWぷれびゅ～） が必要です。", "エラー", MB_OK);
+			return;
+		}
 	}
+
+	CreateUndoPoint();
+
+	// チャプター個数
+	// [xt]作業中にメッセージを回すため、チャプター数と配列内容に不整合があるとまずいのでエイリアスにした
+	m_numChapter = 0;
+	int &pos = m_numChapter;
 
 	int progressCount = -1;
 	char origCaption[64];
@@ -1325,7 +1304,7 @@ void CfgDlg::DetectMute() {
 		// 先フレームを読んで音があれば飛ばす
 		if (i && mute_fr == 0 ) {
 			int naudio = m_exfunc->get_audio_filtered(m_editp, i + seri - 1, buf);
-			if (naudio && isFAW) {
+			if (naudio && cfaw.isLoaded()) {
 				naudio *= fip.audio_ch;
 				int j = cfaw.findFAW(buf, naudio);
 				if (j != -1) {
@@ -1348,18 +1327,10 @@ void CfgDlg::DetectMute() {
 		naudio *= fip.audio_ch;
 
 		// FAWをデコード
-		if (isFAW) {
+		if (cfaw.isLoaded()) {
 			int j = cfaw.findFAW(buf, naudio);
 			if (j != -1) {
 				naudio = cfaw.decodeFAW(buf+j, naudio-j, buf);
-
-				if (cfaw.isLoadFailed()) {
-					MessageBox(this->m_fp->hwnd, "FAWをデコードするのに 11/02/06以降のFAWPreview.auf（FAWぷれびゅ～） が必要です。", "エラー", MB_OK);
-					SetWindowText(m_hDlg, origCaption);
-					SetClassLong(m_hDlg, GCL_STYLE, GetClassLong(m_hDlg, GCL_STYLE) & ~CS_NOCLOSE);
-					EnumChildWindows(m_hDlg, EnableChildWindowProc, TRUE);
-					return ;
-				}
 			}
 		}
 
@@ -1617,26 +1588,39 @@ bool CfgDlg::SetupThumbs()
 
 void CfgDlg::ProjectSave(void *data, int *size) const
 {
+	int saveSize = (int)sizeof(PrfDatEx) + (int)sizeof(ChapterElem) * (m_numChapter - 1);
 	if (!data) {
-		*size = sizeof(PrfDat);
-	} else if (*size == sizeof(PrfDat)) {
+		*size = saveSize;
+	} else if (*size >= saveSize) {
 		// 互換のため未使用領域も保存するが.aupはどうやら連長圧縮されてるっぽいのでクリアしておく
 		ZeroMemory(data, *size);
-		PrfDat *prf = (PrfDat*)data;
-		prf->m_numChapter = min(100, m_numChapter);
-		CopyMemory(prf->m_Frame, m_Frame, sizeof(int) * prf->m_numChapter);
-		for (int i = 0; i < prf->m_numChapter; i++) strcpy_s(prf->m_strTitle[i], m_strTitle[i]);
+		PrfDatEx *prfx = (PrfDatEx*)data;
+		prfx->numChapter = m_numChapter;
+		for (int i = 0; i < prfx->numChapter; i++) {
+			prfx->elems[i].frame = m_Frame[i];
+			strcpy_s(prfx->elems[i].strTitle, m_strTitle[i]);
+		}
 	}
 }
 
 void CfgDlg::ProjectLoad(const void *data, int size)
 {
+	const PrfDatEx *prfx = (const PrfDatEx*)data;
 	if (size == sizeof(PrfDat)) {
-		const PrfDat *prf = (const PrfDat*)data;
-		m_numChapter = prf->m_numChapter;
+		// 後方互換のため
+		m_numChapter = prfx->prf.m_numChapter;
 		ReserveChapterList(m_numChapter);
-		CopyMemory(m_Frame, prf->m_Frame, sizeof(int) * m_numChapter);
-		CopyMemory(m_strTitle, prf->m_strTitle, sizeof(m_strTitle[0]) * m_numChapter);
+		CopyMemory(m_Frame, prfx->prf.m_Frame, sizeof(int) * m_numChapter);
+		CopyMemory(m_strTitle, prfx->prf.m_strTitle, sizeof(m_strTitle[0]) * m_numChapter);
+		ShowList();
+	} else if (size >= sizeof(PrfDatEx) - sizeof(ChapterElem) && prfx->numChapter >= 0 &&
+	           size >= (int)sizeof(PrfDatEx) + (int)sizeof(ChapterElem) * (prfx->numChapter - 1)) {
+		m_numChapter = prfx->numChapter;
+		ReserveChapterList(m_numChapter);
+		for (int i = 0; i < m_numChapter; i++) {
+			m_Frame[i] = prfx->elems[i].frame;
+			strcpy_s(m_strTitle[i], prfx->elems[i].strTitle);
+		}
 		ShowList();
 	}
 }

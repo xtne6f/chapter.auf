@@ -26,6 +26,19 @@ typedef struct
 	int m_SCPos[100];
 } PrfDat;
 
+// aupに保存する内容。チャプタ数制限なし
+typedef struct {
+	int frame;
+	int reserved[3]; // 予約(0で初期化)
+	char strTitle[STRLEN];
+} ChapterElem;
+
+typedef struct {
+	PrfDat prf; // 後方互換+予約(0で初期化)
+	int numChapter;
+	ChapterElem elems[1];
+} PrfDatEx;
+
 //typedef struct {
 //	int frame;
 //	std::string title;
